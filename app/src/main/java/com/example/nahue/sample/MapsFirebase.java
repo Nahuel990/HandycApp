@@ -64,7 +64,7 @@ public class MapsFirebase extends AppCompatActivity implements OnMapReadyCallbac
     Marker mCurrLocationMarker;
     Marker mCurrentPositionMarker2;
     FusedLocationProviderClient mFusedLocationClient;
-    private String serverKey = "AIzaSyB39stRJZAxFRzpK-gQsjOfmfQxG0YU8ZE";
+    private String serverKey = "API KEY MAPS";
     LatLng origin;
     LatLng destination;
     private String[] colors = {"#7fff7272", "#7f31c7c5", "#7fff8a00"};
