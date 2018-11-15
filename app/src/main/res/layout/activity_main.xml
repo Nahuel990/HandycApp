@@ -12,6 +12,7 @@
         android:layout_height="375dp"
         android:layout_centerInParent="true"
         android:onClick="goToAnActivity"
+        android:soundEffectsEnabled="true"
         android:text="Inicio"
         android:title="@string/asdasdasdasd"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -19,6 +20,7 @@
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:ignore="MissingConstraints" />
+        tools:ignore="MissingConstraints"
+        tools:soundEffectsEnabled="true" />
 
 </android.support.constraint.ConstraintLayout>

@@ -3,17 +3,27 @@ package com.example.nahue.sample;
 
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Looper;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 
+
+import com.akexorcist.googledirection.DirectionCallback;
+import com.akexorcist.googledirection.GoogleDirection;
+import com.akexorcist.googledirection.constant.AvoidType;
+import com.akexorcist.googledirection.constant.TransportMode;
+import com.akexorcist.googledirection.model.Route;
+import com.akexorcist.googledirection.util.DirectionConverter;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -27,6 +37,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.akexorcist.googledirection.model.Direction;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
@@ -40,9 +51,10 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
+import java.util.ArrayList;
 import java.util.Date;
 
-public class MapsFirebase extends AppCompatActivity implements OnMapReadyCallback {
+public class MapsFirebase extends AppCompatActivity implements OnMapReadyCallback, DirectionCallback {
     FirebaseDatabase database = FirebaseDatabase.getInstance();
     private static final String TAG = "MainActivity";
     GoogleMap mGoogleMap;
@@ -50,9 +62,12 @@ public class MapsFirebase extends AppCompatActivity implements OnMapReadyCallbac
     LocationRequest mLocationRequest;
     Location mLastLocation;
     Marker mCurrLocationMarker;
-    Marker mCurrLocationMarker2;
+    Marker mCurrentPositionMarker2;
     FusedLocationProviderClient mFusedLocationClient;
-
+    private String serverKey = "AIzaSyB39stRJZAxFRzpK-gQsjOfmfQxG0YU8ZE";
+    LatLng origin;
+    LatLng destination;
+    private String[] colors = {"#7fff7272", "#7f31c7c5", "#7fff8a00"};
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         PlaceAutocompleteFragment placeAutoComplete;
@@ -64,22 +79,31 @@ public class MapsFirebase extends AppCompatActivity implements OnMapReadyCallbac
                 new LatLng(-31.42320, -64.190),
                 new LatLng(-31.42320, -64.190)));
         placeAutoComplete.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+
             @Override
             public void onPlaceSelected(Place place) {
                 mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(place.getLatLng(), 15));
-                Polyline polyline1;
 
-                polyline1 = mGoogleMap.addPolyline(new PolylineOptions()
-                        .clickable(true)
-                        .add(
-                                new LatLng(mLastLocation.getLatitude(),mLastLocation.getLongitude()),
-                                new LatLng(place.getLatLng().latitude,place.getLatLng().longitude)));
+               origin = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
+               destination = new LatLng(place.getLatLng().latitude,place.getLatLng().longitude);
+
+//
+//                Polyline polyline1;
+//
+//                polyline1 = mGoogleMap.addPolyline(new PolylineOptions()
+//                        .clickable(true)
+//                        .add(
+//                                new LatLng(mLastLocation.getLatitude(),mLastLocation.getLongitude()),
+//                               );
 // Store a data object with the polyline, used here to indicate an arbitrary type.
+//
+//                polyline1.setTag("A");
+                requestDirection();
+//                Log.d("Maps", "Place selected: " + place.getName());
 
-                polyline1.setTag("A");
 
-                Log.d("Maps", "Place selected: " + place.getName());
             }
+
 
             @Override
             public void onError(Status status) {
@@ -89,6 +113,7 @@ public class MapsFirebase extends AppCompatActivity implements OnMapReadyCallbac
 
         getSupportActionBar().setTitle("Map Location Activity");
 
+
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
         mapFrag = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map2);
@@ -96,6 +121,51 @@ public class MapsFirebase extends AppCompatActivity implements OnMapReadyCallbac
     }
 
 
+
+
+    public void requestDirection() {
+//                Snackbar.make(btnRequestDirection, "Direction Requesting...", Snackbar.LENGTH_SHORT).show();
+        GoogleDirection.withServerKey(serverKey)
+                .from(origin)
+                .to(destination)
+                .alternativeRoute(true)
+                .transportMode(TransportMode.WALKING)
+               .execute(this);
+    }
+    public void onDirectionSuccess (Direction direction, String rawBody) {
+//                Snackbar.make(btnRequestDirection, "Success with status : " + direction.getStatus(), Snackbar.LENGTH_SHORT).show();
+        if (direction.isOK()) {
+
+//            Route route = direction.getRouteList().get(0);
+            mGoogleMap.addMarker(new MarkerOptions().position(origin));
+            mGoogleMap.addMarker(new MarkerOptions().position(destination));
+
+            for (int i = 0; i < direction.getRouteList().size(); i++) {
+                Route route = direction.getRouteList().get(i);
+                String color = colors[i % colors.length];
+                ArrayList<LatLng> directionPositionList = route.getLegList().get(0).getDirectionPoint();
+                mGoogleMap.addPolyline(DirectionConverter.createPolyline(this, directionPositionList, 5, Color.parseColor(color)));
+            }
+            setCameraWithCoordinationBounds(direction.getRouteList().get(0));
+
+//                    btnRequestDirection.setVisibility(View.GONE);
+        } else {
+//                    Snackbar.make(btnRequestDirection, direction.getStatus(), Snackbar.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    public void onDirectionFailure(Throwable t) {
+
+    }
+
+
+    private void setCameraWithCoordinationBounds(Route route) {
+        LatLng southwest = route.getBound().getSouthwestCoordination().getCoordination();
+        LatLng northeast = route.getBound().getNortheastCoordination().getCoordination();
+        LatLngBounds bounds = new LatLngBounds(southwest, northeast);
+        mGoogleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
+    }
     @Override
     public void onPause() {
         super.onPause();
